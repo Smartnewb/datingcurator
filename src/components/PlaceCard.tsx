@@ -1,9 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { Heart, MapPin, Star } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Place } from '@/types/database'
+
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400'
 
 interface PlaceCardProps {
   place: Place
@@ -25,22 +28,19 @@ const categoryLabels = {
 }
 
 export function PlaceCard({ place, isFavorite = false, onToggleFavorite }: PlaceCardProps) {
+  const [imgSrc, setImgSrc] = useState(place.image_url || FALLBACK_IMAGE)
+
   return (
     <Link href={`/places/${place.id}`} className="card block">
       <div className="relative aspect-[4/3] bg-gray-100">
-        {place.image_url ? (
-          <Image
-            src={place.image_url}
-            alt={place.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            이미지 없음
-          </div>
-        )}
+        <Image
+          src={imgSrc}
+          alt={place.name}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          onError={() => setImgSrc(FALLBACK_IMAGE)}
+        />
         <button
           onClick={(e) => {
             e.preventDefault()

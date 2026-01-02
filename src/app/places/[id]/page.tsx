@@ -10,6 +10,8 @@ import { BottomNav } from '@/components/BottomNav'
 import { ArrowLeft, Heart, MapPin, Star, Send } from 'lucide-react'
 import Link from 'next/link'
 
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400'
+
 const priceLabels = {
   low: '1만원 이하',
   medium: '1~3만원',
@@ -39,6 +41,7 @@ export default function PlaceDetailPage() {
   const [newReview, setNewReview] = useState('')
   const [newRating, setNewRating] = useState(5)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [imgSrc, setImgSrc] = useState(FALLBACK_IMAGE)
 
   useEffect(() => {
     const supabase = createClient()
@@ -58,6 +61,7 @@ export default function PlaceDetailPage() {
         return
       }
       setPlace(placeData as Place)
+      setImgSrc(placeData.image_url || FALLBACK_IMAGE)
 
       const { data: reviewsData } = await supabase
         .from('reviews')
@@ -164,15 +168,14 @@ export default function PlaceDetailPage() {
 
       <main className="max-w-3xl mx-auto">
         <div className="relative aspect-[16/9] bg-gray-100">
-          {place.image_url && (
-            <Image
-              src={place.image_url}
-              alt={place.name}
-              fill
-              className="object-cover"
-              priority
-            />
-          )}
+          <Image
+            src={imgSrc}
+            alt={place.name}
+            fill
+            className="object-cover"
+            priority
+            onError={() => setImgSrc(FALLBACK_IMAGE)}
+          />
         </div>
 
         <div className="px-4 py-6">
