@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>장소 정보 업데이트 도우미</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1000px; 
+      margin: 0 auto; 
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { color: #FF6B6B; }
+    .place-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: all 0.2s;
+    }
+    .place-card.deleted {
+      background: #fee;
+      opacity: 0.6;
+    }
+    .place-card.deleted .edit-section {
+      display: none;
+    }
+    .place-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      gap: 12px;
+    }
+    .place-number {
+      font-weight: bold;
+      font-size: 18px;
+      color: #FF6B6B;
+      min-width: 30px;
+    }
+    .place-info {
+      flex: 1;
+    }
+    .original-info {
+      color: #999;
+      font-size: 12px;
+      margin-bottom: 8px;
+      padding: 8px;
+      background: #f9f9f9;
+      border-radius: 6px;
+    }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .btn-search {
+      background: #03C75A;
+      color: white;
+    }
+    .btn-search:hover {
+      background: #02b351;
+    }
+    .btn-delete {
+      background: #dc3545;
+      color: white;
+    }
+    .btn-delete:hover {
+      background: #c82333;
+    }
+    .btn-restore {
+      background: #6c757d;
+      color: white;
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .input-group {
+      flex: 1;
+    }
+    .input-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+      display: block;
+    }
+    .text-input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .text-input:focus {
+      outline: none;
+      border-color: #FF6B6B;
+    }
+    .text-input.modified {
+      border-color: #ffc107;
+      background: #fffdf0;
+    }
+    .url-input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .url-input:focus {
+      outline: none;
+      border-color: #FF6B6B;
+    }
+    .url-input.filled {
+      border-color: #4ECDC4;
+      background: #f0fffe;
+    }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .generate-section {
+      position: sticky;
+      bottom: 20px;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      margin-top: 20px;
+    }
+    .btn-generate {
+      background: #FF6B6B;
+      color: white;
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+    }
+    .btn-generate:hover {
+      background: #ee5a5a;
+    }
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .stat-item {
+      text-align: center;
+      padding: 8px 16px;
+      background: #f0f0f0;
+      border-radius: 8px;
+    }
+    .stat-number {
+      font-size: 24px;
+      font-weight: bold;
+      color: #FF6B6B;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+    }
+    .sql-output {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 16px;
+      display: none;
+    }
+    .btn-copy {
+      background: #4ECDC4;
+      color: white;
+      margin-top: 10px;
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+    }
+    .instructions {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #856404;
+    }
+    .instructions ol, .instructions ul {
+      margin-bottom: 0;
+      color: #856404;
+    }
+    .legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 2px solid;
+    }
+    .edit-section {
+      border-top: 1px solid #eee;
+      padding-top: 12px;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>장소 정보 업데이트 도우미</h1>
+  
+  <div class="instructions">
+    <h3>사용 방법</h3>
+    <ol>
+      <li><strong>네이버 지도 열기</strong> 버튼으로 실제 장소 확인</li>
+      <li>장소명/주소가 다르면 <strong>직접 수정</strong></li>
+      <li>없어진 장소는 <strong>삭제</strong> 버튼 클릭</li>
+      <li>사진 URL 복사해서 <strong>이미지 URL</strong>에 붙여넣기</li>
+      <li>모든 장소 완료 후 <strong>SQL 생성</strong> 클릭</li>
+    </ol>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color" style="border-color: #ffc107; background: #fffdf0;"></div>
+        <span>수정됨</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="border-color: #4ECDC4; background: #f0fffe;"></div>
+        <span>이미지 입력됨</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="border-color: #dc3545; background: #fee;"></div>
+        <span>삭제 예정</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="places-container"></div>
+
+  <div class="generate-section">
+    <div class="stats" id="stats">
+      <div class="stat-item">
+        <div class="stat-number" id="stat-total">20</div>
+        <div class="stat-label">전체</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="stat-modified">0</div>
+        <div class="stat-label">수정</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="stat-images">0</div>
+        <div class="stat-label">이미지</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="stat-deleted">0</div>
+        <div class="stat-label">삭제</div>
+      </div>
+    </div>
+    <button class="btn btn-generate" onclick="generateSQL()">SQL 생성하기</button>
+    <button class="btn btn-copy" onclick="copySQL()" style="display:none" id="copyBtn">SQL 복사하기</button>
+    <div class="sql-output" id="sqlOutput"></div>
+  </div>
+
+  <script>
+    const places = [
+      { name: "성심당 본점", address: "대전 중구 대종로480번길 15", category: "cafe" },
+      { name: "카페 루앤비", address: "대전 유성구 궁동로 31", category: "cafe" },
+      { name: "폴바셋 대전둔산점", address: "대전 서구 대덕대로 179", category: "cafe" },
+      { name: "투썸플레이스 대전타임월드점", address: "대전 서구 대덕대로 211", category: "cafe" },
+      { name: "카페 온마이마인드", address: "대전 유성구 어은로 47", category: "cafe" },
+      { name: "더벤티 충남대점", address: "대전 유성구 대학로 99", category: "cafe" },
+      { name: "봉추찜닭 궁동점", address: "대전 유성구 궁동로8번길 12", category: "restaurant" },
+      { name: "곱창고 유성점", address: "대전 유성구 온천북로 39", category: "restaurant" },
+      { name: "서울깍두기 대전점", address: "대전 서구 둔산로 55", category: "restaurant" },
+      { name: "이자카야 하나", address: "대전 유성구 봉명동 548-8", category: "restaurant" },
+      { name: "피자파티 궁동점", address: "대전 유성구 궁동로 27", category: "restaurant" },
+      { name: "맛닭꼬 대전본점", address: "대전 중구 중앙로 170", category: "restaurant" },
+      { name: "설빙 대전둔산점", address: "대전 서구 둔산로 121", category: "dessert" },
+      { name: "뚜레쥬르 유성온천점", address: "대전 유성구 온천로 45", category: "dessert" },
+      { name: "배스킨라빈스 타임월드점", address: "대전 서구 대덕대로 211", category: "dessert" },
+      { name: "공차 충남대점", address: "대전 유성구 대학로 101", category: "dessert" },
+      { name: "CGV 대전터미널", address: "대전 동구 동서대로 1689", category: "activity" },
+      { name: "대전 엑스포 과학공원", address: "대전 유성구 대덕대로 480", category: "activity" },
+      { name: "유성온천", address: "대전 유성구 온천로 77", category: "activity" },
+      { name: "보드게임카페 다이스", address: "대전 유성구 궁동로 25", category: "activity" },
+    ];
+
+    const state = places.map(p => ({
+      ...p,
+      originalName: p.name,
+      originalAddress: p.address,
+      newName: p.name,
+      newAddress: p.address,
+      imageUrl: '',
+      deleted: false
+    }));
+
+    const container = document.getElementById('places-container');
+    
+    state.forEach((place, index) => {
+      const card = document.createElement('div');
+      card.className = 'place-card';
+      card.id = `card-${index}`;
+      card.innerHTML = `
+        <div class="place-header">
+          <span class="place-number">#${index + 1}</span>
+          <div class="place-info">
+            <div class="original-info">
+              <strong>원본:</strong> ${place.originalName} | ${place.originalAddress}
+            </div>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-search" onclick="openNaverMap(${index})">
+              네이버 지도 열기
+            </button>
+            <button class="btn btn-delete" id="delete-btn-${index}" onclick="toggleDelete(${index})">
+              삭제
+            </button>
+          </div>
+        </div>
+        <div class="edit-section" id="edit-section-${index}">
+          <div class="input-row">
+            <div class="input-group">
+              <label class="input-label">장소명</label>
+              <input 
+                type="text" 
+                class="text-input" 
+                id="name-${index}"
+                value="${place.name}"
+                onchange="updateState(${index}, 'name')"
+                oninput="checkModified(${index}, 'name')"
+              >
+            </div>
+            <div class="input-group">
+              <label class="input-label">주소</label>
+              <input 
+                type="text" 
+                class="text-input" 
+                id="address-${index}"
+                value="${place.address}"
+                onchange="updateState(${index}, 'address')"
+                oninput="checkModified(${index}, 'address')"
+              >
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">이미지 URL</label>
+            <input 
+              type="text" 
+              class="url-input" 
+              id="url-${index}"
+              placeholder="이미지 URL을 붙여넣으세요..."
+              onchange="updateState(${index}, 'url')"
+              oninput="checkUrlFilled(${index})"
+            >
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+
+    function openNaverMap(index) {
+      const place = state[index];
+      const query = `${place.newName} ${place.newAddress}`;
+      const url = `https://map.naver.com/p/search/${encodeURIComponent(query)}`;
+      window.open(url, '_blank');
+    }
+
+    function toggleDelete(index) {
+      state[index].deleted = !state[index].deleted;
+      const card = document.getElementById(`card-${index}`);
+      const btn = document.getElementById(`delete-btn-${index}`);
+      
+      if (state[index].deleted) {
+        card.classList.add('deleted');
+        btn.textContent = '복원';
+        btn.classList.remove('btn-delete');
+        btn.classList.add('btn-restore');
+      } else {
+        card.classList.remove('deleted');
+        btn.textContent = '삭제';
+        btn.classList.remove('btn-restore');
+        btn.classList.add('btn-delete');
+      }
+      updateStats();
+    }
+
+    function updateState(index, field) {
+      if (field === 'name') {
+        state[index].newName = document.getElementById(`name-${index}`).value.trim();
+      } else if (field === 'address') {
+        state[index].newAddress = document.getElementById(`address-${index}`).value.trim();
+      } else if (field === 'url') {
+        state[index].imageUrl = document.getElementById(`url-${index}`).value.trim();
+      }
+      updateStats();
+    }
+
+    function checkModified(index, field) {
+      const input = document.getElementById(`${field === 'name' ? 'name' : 'address'}-${index}`);
+      const original = field === 'name' ? state[index].originalName : state[index].originalAddress;
+      input.classList.toggle('modified', input.value.trim() !== original);
+      updateState(index, field);
+    }
+
+    function checkUrlFilled(index) {
+      const input = document.getElementById(`url-${index}`);
+      input.classList.toggle('filled', input.value.trim().length > 0);
+      updateState(index, 'url');
+    }
+
+    function updateStats() {
+      let modified = 0;
+      let images = 0;
+      let deleted = 0;
+
+      state.forEach((place, index) => {
+        if (place.deleted) {
+          deleted++;
+        } else {
+          if (place.newName !== place.originalName || place.newAddress !== place.originalAddress) {
+            modified++;
+          }
+          if (place.imageUrl) {
+            images++;
+          }
+        }
+      });
+
+      document.getElementById('stat-total').textContent = state.length;
+      document.getElementById('stat-modified').textContent = modified;
+      document.getElementById('stat-images').textContent = images;
+      document.getElementById('stat-deleted').textContent = deleted;
+    }
+
+    function generateSQL() {
+      let sql = '-- 장소 정보 업데이트 SQL\n-- Supabase SQL Editor에서 실행하세요\n\n';
+      
+      // Deletes
+      const deletes = state.filter(p => p.deleted);
+      if (deletes.length > 0) {
+        sql += '-- === 삭제할 장소 ===\n';
+        deletes.forEach(place => {
+          sql += `DELETE FROM places WHERE name = '${place.originalName.replace(/'/g, "''")}';\n`;
+        });
+        sql += '\n';
+      }
+
+      // Updates
+      const updates = state.filter(p => !p.deleted && (
+        p.newName !== p.originalName || 
+        p.newAddress !== p.originalAddress || 
+        p.imageUrl
+      ));
+
+      if (updates.length > 0) {
+        sql += '-- === 수정할 장소 ===\n';
+        updates.forEach(place => {
+          const setClauses = [];
+          
+          if (place.newName !== place.originalName) {
+            setClauses.push(`name = '${place.newName.replace(/'/g, "''")}'`);
+          }
+          if (place.newAddress !== place.originalAddress) {
+            setClauses.push(`address = '${place.newAddress.replace(/'/g, "''")}'`);
+          }
+          if (place.imageUrl) {
+            setClauses.push(`image_url = '${place.imageUrl.replace(/'/g, "''")}'`);
+          }
+
+          if (setClauses.length > 0) {
+            sql += `UPDATE places SET ${setClauses.join(', ')} WHERE name = '${place.originalName.replace(/'/g, "''")}';\n`;
+          }
+        });
+      }
+
+      if (deletes.length === 0 && updates.length === 0) {
+        alert('변경사항이 없습니다!');
+        return;
+      }
+
+      sql += `\n-- === 요약 ===\n`;
+      sql += `-- 삭제: ${deletes.length}개\n`;
+      sql += `-- 수정: ${updates.length}개\n`;
+
+      const output = document.getElementById('sqlOutput');
+      output.textContent = sql;
+      output.style.display = 'block';
+      document.getElementById('copyBtn').style.display = 'block';
+    }
+
+    function copySQL() {
+      const sql = document.getElementById('sqlOutput').textContent;
+      navigator.clipboard.writeText(sql).then(() => {
+        alert('SQL이 클립보드에 복사되었습니다!\nSupabase SQL Editor에 붙여넣기 하세요.');
+      });
+    }
+
+    // Initial stats
+    updateStats();
+  </script>
+</body>
+</html>
